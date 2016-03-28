@@ -122,6 +122,25 @@ static void convert_key_to_hex_ascii(const unsigned char *master_key,
                                      unsigned int keysize, char *master_key_ascii);
 static int put_crypt_ftr_and_key(struct crypt_mnt_ftr *crypt_ftr);
 
+static void convert_key_to_hex_ascii_for_upgrade(const unsigned char *master_key,
+                                     unsigned int keysize, char *master_key_ascii)
+{
+    unsigned int i, a;
+    unsigned char nibble;
+
+    for (i = 0, a = 0; i < keysize; i++, a += 2) {
+        /* For each byte, write out two ascii hex digits */
+        nibble = (master_key[i] >> 4) & 0xf;
+        master_key_ascii[a] = nibble + (nibble > 9 ? 0x57 : 0x30);
+
+        nibble = master_key[i] & 0xf;
+        master_key_ascii[a + 1] = nibble + (nibble > 9 ? 0x57 : 0x30);
+    }
+
+    /* Add the null termination */
+    master_key_ascii[a] = '\0';
+}
+
 static int get_keymaster_hw_fde_passwd(const char* passwd, unsigned char* newpw,
                                   unsigned char* salt,
                                   const struct crypt_mnt_ftr *ftr)
@@ -236,7 +255,7 @@ static int verify_and_update_hw_fde_passwd(char *passwd,
                         SLOGE("System out of memory. Password verification  incomplete");
                         goto out;
                     }
-                    convert_key_to_hex_ascii((const unsigned char*)passwd,
+                    convert_key_to_hex_ascii_for_upgrade((const unsigned char*)passwd,
                                        strlen(passwd), new_passwd);
                 }
             }
